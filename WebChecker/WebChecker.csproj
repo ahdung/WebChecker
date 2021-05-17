@@ -1,0 +1,38 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net5.0</TargetFramework>
+		<ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+		<RootNamespace>AhDung.WebChecker</RootNamespace>
+		<UserSecretsId>cbb82039-bdaf-41dc-b888-ff83da141201</UserSecretsId>
+		<!--<CopyRazorGenerateFilesToPublishDirectory>true</CopyRazorGenerateFilesToPublishDirectory>
+		<RazorCompileOnBuild>false</RazorCompileOnBuild>
+		<RazorCompileOnPublish>false</RazorCompileOnPublish>-->
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <Compile Remove="Keys\**" />
+	  <Compile Remove="logs\**" />
+	  <Content Remove="Keys\**" />
+	  <Content Remove="logs\**" />
+	  <EmbeddedResource Remove="Keys\**" />
+	  <EmbeddedResource Remove="logs\**" />
+	  <None Remove="Keys\**" />
+	  <None Remove="logs\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Remove="CheckJob.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Serilog.AspNetCore" Version="4.1.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="app_offline.htm">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
+</Project>

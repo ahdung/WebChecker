@@ -1,0 +1,156 @@
+﻿@page "{handler?}"
+@using AhDung.WebChecker
+@model AhDung.WebChecker.Pages.IndexModel
+@{
+    ViewBag.Title = "Web Checker";
+}
+
+@section head{
+    @if (Model.PageRefreshIntervalSeconds > 0)
+    {
+        <meta http-equiv="refresh" content="@Model.PageRefreshIntervalSeconds;"/>
+    }
+    <script type="text/javascript">
+        document.addEventListener("DOMContentLoaded",
+            function(event) {
+                var txbRefresh = document.getElementById('txbRefresh');
+
+                txbRefresh.addEventListener('blur', UpdateRefreshValue);
+                txbRefresh.addEventListener('keyup',
+                    function(e) {
+                        if (e.keyCode === 13)
+                            UpdateRefreshValue();
+                    });
+
+                document.querySelectorAll('tr.head').forEach(function(el) {
+                    el.addEventListener('click',
+                        function(e) {
+                            var detail = this.nextElementSibling;
+                            detail.style.display = detail.style.display === 'none' ? '' : 'none';
+                        });
+                });
+            });
+
+        function UpdateRefreshValue() {
+            setCookie('refresh', document.getElementById('txbRefresh').value);
+            location.reload();
+        }
+
+        function setCookie(name, value, days) {
+            var expires = "";
+            if (days) {
+                var date = new Date();
+                date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (value || "") + expires + "; path=/";
+        }
+    </script>
+    <style>
+        header {
+            background-color: black;
+            color: white;
+            padding: 1em;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        #signout, #signout:visited {
+            color: #03a9f4;
+            text-decoration-line: none;
+        }
+        #signout:hover { text-decoration-line: underline; }
+        #signout:active { filter: brightness(90%); }
+
+        #txbRefresh {
+            width: 50px;
+            border: none;
+            padding: 0.3em;
+            outline: none;
+            border-radius: 3px;
+        }
+
+        header > *:last-child > * { display: inline-block; }
+
+        table {
+            width: 100%;
+            border-bottom: 1px solid #ddd
+        }
+
+        tr.head:not(:first-child) { border-top: 1px solid #ddd }
+
+        .head > td:last-child { text-align: right }
+
+        td { padding: 0.8em 0.5em; }
+
+        .detail > td {
+            word-break: break-all;
+            background-color: whitesmoke;
+        }
+
+        a, a:link, a:visited {
+            color: #2196f3;
+            text-decoration: none;
+        }
+        a:hover { text-decoration: underline }
+        a:active { filter: brightness(90%); }
+
+        .state {
+            padding: 1px 3px;
+            border-radius: 3px;
+            color: white;
+            display: none;
+        }
+
+        .state.ok {
+            display: inline-block;
+            background-color: #01a507;
+        }
+
+        .state.fault {
+            display: inline-block;
+            background-color: #ff5722
+        }
+
+        .state + * { color: gray }
+    </style>
+}
+
+<header>
+    <span>Web Checker</span>
+    <span style="text-align: right">
+        <span>Refresh(sec) <input id="txbRefresh" type="number" value="@Model.PageRefreshIntervalSeconds"/></span><span style="margin-left: 2em">@User.Identity.Name | <a id="signout" asp-page-handler="SignOut">Sign out</a></span>
+    </span>
+</header>
+@if (Vars.EnabledWebs.Count == 0)
+{
+    <p style="margin: 3em 0; text-align: center;">No web need check. Configure in <strong>appsettings.json</strong></p>
+}
+else
+{
+    <table>
+        @foreach (var web in Vars.EnabledWebs)
+        {
+            var cssClass = web.InChecking || web.Result?.Succeeded is not {} succeeded ? "" : succeeded ? "ok" : "fault";
+            var speed = web.InChecking || web.Result is not {Succeeded: true } r ? "" : $" {r.Speed}ms";
+            var state = web.InChecking ? "" : web.Result?.State;
+            var lastCheck = web.InChecking ? "Checking..." : web.FriendlyLastCheck;
+            var errMsg = Html.Raw(web.InChecking || web.Result?.Detail is not {} msg ? "" : $"<p style=\"color:#ff5722\">Error: {msg}</p>");
+
+            <tr class="head">
+                <td>@web.Name</td>
+                <td style="font-size: 0.8em">
+                    <span class="state @cssClass">@state</span><span>@speed</span>
+                </td>
+                <td>@lastCheck</td>
+            </tr>
+            <tr class="detail" style="display: none">
+                <td colspan="3">
+                    <p>Url: <a href="@web.Url" target="_blank">@web.Url</a></p>
+                    @errMsg
+                    <p>Last check: @web.LastCheck?.ToString(AppSettings.TimeFormat)</p>
+                </td>
+            </tr>
+        }
+    </table>
+}

@@ -1,0 +1,16 @@
+﻿@using System.IO
+@using Microsoft.AspNetCore.Hosting
+@inject IWebHostEnvironment env
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>@ViewBag.Title</title>
+    <meta name="viewport" content="width=device-width"/>
+    <link rel="stylesheet" href="~/css/common.css?t=@File.GetLastWriteTime(System.IO.Path.Combine(env.WebRootPath, @"css\common.css")).ToString("yyyyMMddHHmmss")"/>
+    @RenderSection("head", false)
+</head>
+<body>
+@RenderBody()
+</body>
+</html>

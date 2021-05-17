@@ -1,0 +1,51 @@
+﻿@page
+@model AhDung.WebChecker.Pages.SignInModel
+@{
+    ViewBag.Title = "登录";
+}
+
+@section head{
+    <style>
+        input {
+            display: block;
+            width: 100%;
+            border: 1px solid #ccc;
+            padding: 0.5em;
+            margin-top: 0.2em;
+            margin-bottom: 1em;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input:focus {
+            box-shadow: 0 0 0 3px rgba(0, 142, 255, 0.18);
+            border-color: #45adff;
+        }
+
+        input[type=submit] {
+            background-color: #005b9c;
+            border-color: #005b9c;
+            color: white;
+        }
+
+        input[type=submit]:hover { filter: brightness(105%); }
+
+        input[type=submit]:active { filter: brightness(95%); }
+    </style>
+    <script type="text/javascript">
+
+    </script>
+}
+
+<div style="width: 300px; margin: 80px auto 0 auto;">
+    <h1 style="font-weight: normal; text-align: center;">Sign In</h1>
+    <form method="post">
+        <p>Name:</p>
+        <input asp-for="UserInfo.Name" type="text" value="@Model.UserInfo?.Name" autofocus/>
+        <p>Password:</p>
+        <input asp-for="UserInfo.Password" type="password"/>
+        @Html.AntiForgeryToken()
+        <input type="submit" value="Submit"/>
+    </form>
+    <p style="color: #ff6b02">@Model.ErrorMessage</p>
+</div>

@@ -1,0 +1,14 @@
+﻿html, body, input, button, form, div, span, p, a, header, table, th, td, tr {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    min-width: 0;
+    font-family: sans-serif;
+}
+table { border-collapse: collapse; }
+a, a:link, a:visited {
+    text-decoration: none;
+    color: inherit
+}
+a:hover { text-decoration: underline }
+a:active { filter: brightness(90%) }
