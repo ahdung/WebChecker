@@ -1,36 +1,103 @@
-﻿using AhDung.WebChecker.Models;
+﻿using AhDung.AspNet.Razor;
+using AhDung.Extensions;
+using AhDung.WebChecker.Models;
+using AhDung.WebChecker.Notifications.Templates;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Mail;
+using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Options;
 
 namespace AhDung.WebChecker.Services
 {
     public class MailNotificationService : INotificationService
     {
-        private readonly IConfiguration _configuration;
-        private readonly ILogger<MailNotificationService> _logger;
+        readonly IOptionsMonitor<MailNotificationOptions> _optionsMonitor;
+        readonly ILogger<MailNotificationService> _logger;
+        readonly IServiceScopeFactory _scopeFactory;
+        readonly AppSettings _settings;
+        readonly Channel<Web> _messageQueue = Channel.CreateUnbounded<Web>(new() { SingleReader = true });
+        readonly CountdownEvent _cde = new(0);
 
-        public MailNotificationService(IConfiguration configuration, ILogger<MailNotificationService> logger)
+        public MailNotificationService(
+            IOptionsMonitor<MailNotificationOptions> optionsMonitor,
+            AppSettings settings,
+            IServiceScopeFactory scopeFactory,
+            ILogger<MailNotificationService> logger
+        )
         {
-            _configuration = configuration;
-            _logger        = logger;
+            _optionsMonitor = optionsMonitor;
+            _settings       = settings;
+            _scopeFactory   = scopeFactory;
+            _logger         = logger;
+            _               = StartProcessQueueAsync();
         }
 
-        public async Task NotifyAsync(Web web)
+        async Task StartProcessQueueAsync()
         {
-            if (!AppSettings.Notify.Email.Enabled
-                || _configuration.GetSection("Notify:Email:Sender")?.Get<MailSender>() is not { } sender
-                || _configuration.GetSection("Notify:Email:Receivers")?.Get<List<string>>() is not { Count: > 0 } receivers)
+            while (await _messageQueue.Reader.WaitToReadAsync().ConfigureAwait(false))
+            {
+                _cde.Wait();
+                var webs = _messageQueue.Reader.ReadAll().ToList();
+
+                _logger.LogInformation("Picked {count} webs from notification queue: {webs}.", webs.Count, string.Join(", ", webs.Select(x => x.Name)));
+
+                var info = await MakeMailInfo(webs);
+                _logger.LogInformation("Sending mail...");
+                await SendMailAsync(info.HtmlBody, info.Title);
+            }
+        }
+
+        async Task<(string Title, string HtmlBody)> MakeMailInfo(IEnumerable<Web> webs)
+        {
+            var webList = webs.ToList();
+            var model = new MailNotificationTemplateModel
+            {
+                Webs       = webList,
+                TimeFormat = _settings.TimeFormat,
+                ToolUrl    = _settings.OwnUrl,
+            };
+
+            string html;
+
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                var render = scope.ServiceProvider.GetRequiredService<IViewRenderService>();
+                html = await render.RenderToStringAsync("~/Pages/MailNotificationTemplate.cshtml", model);
+            }
+
+            string title;
+            if (webList.Count == 1)
+            {
+                var web = webList[0];
+                title = $"{web.Name}访问{(web.Result.Succeeded ? "恢复" : "故障")}";
+            }
+            else
+            {
+                title = string.Join("", webList.GroupBy(x => x.Result.Succeeded)
+                                               .OrderBy(x => x.Key) //故障在前
+                                               .Select(x => $"{x.Count()}网站{(x.Key ? "恢复" : "故障")}"));
+            }
+
+            return (title, html);
+        }
+
+        async Task SendMailAsync(string htmlBody, string title = null)
+        {
+            if (_optionsMonitor.CurrentValue is not { Sender: { } sender, Receivers: { Count: > 0 } receivers } options)
             {
                 return;
             }
 
-            var retryTimes = AppSettings.Notify.Email.RetryTimes;
-            var retryIntervalInMinutes = AppSettings.Notify.Email.RetryIntervalInMinutes;
+            var retryTimes = options.RetryTimes;
+            var retryIntervalInMinutes = options.RetryIntervalInMinutes;
             if (retryIntervalInMinutes < 0)
                 retryIntervalInMinutes = 0;
 
@@ -41,19 +108,9 @@ namespace AhDung.WebChecker.Services
                     using var msg = new MailMessage
                     {
                         From       = new(sender.Address),
-                        Subject    = $"{web.Name}访问{(web.Result.Succeeded ? "恢复" : "故障")}",
+                        Subject    = title ?? "WebChecker通知",
                         IsBodyHtml = true,
-                        Body = $@"Url: <a href=""{web.Url}"" target=""_blank"">{web.Url}</a><br/>
-State: {(web.Result.Succeeded
-    ? @"<span style=""color:#4caf50"">正常</span>"
-    : @"<span style=""color:#ff5722"">故障</span>")}<br/>
-{(web.Result.Succeeded
-    ? $"Speed: {web.Result.Speed}ms"
-    : $"Error: {WebUtility.HtmlEncode(web.Result.Detail)}")}<br/>
-LastCheck: {WebUtility.HtmlEncode(web.LastCheck?.ToString(AppSettings.TimeFormat))}<br/>
-{(AppSettings.OwnUrl is { Length: >0 } ownUlr
-    ? $"<br/>To visit WebChecker: <a href=\"{ownUlr}\" target=\"_blank\">{ownUlr}</a>"
-    : "")}",
+                        Body       = htmlBody,
                     };
 
                     receivers.ForEach(msg.To.Add);
@@ -65,7 +122,7 @@ LastCheck: {WebUtility.HtmlEncode(web.LastCheck?.ToString(AppSettings.TimeFormat
                     };
 
                     await client.SendMailAsync(msg).ConfigureAwait(false);
-                    _logger.LogInformation("\"{name}\" mail sent.", web.Name);
+                    _logger.LogInformation("Mail sent.");
                     break;
                 }
                 catch (Exception ex)
@@ -82,5 +139,68 @@ LastCheck: {WebUtility.HtmlEncode(web.LastCheck?.ToString(AppSettings.TimeFormat
                 }
             } while (true);
         }
+
+        public async Task NotifyAsync(Web web)
+        {
+            if (!_optionsMonitor.CurrentValue.Enabled)
+            {
+                return;
+            }
+
+            _cde.ForceAddCount();
+
+            try
+            {
+                _logger.LogInformation("Adding \"{name}\" to notification queue.", web.Name);
+                await _messageQueue.Writer.WriteAsync(web).ConfigureAwait(false);
+            }
+            finally
+            {
+                _ = Task.Delay(3000)
+                        .ContinueWith(_ => _cde.Signal());
+            }
+        }
+    }
+
+    public class MailNotificationOptions
+    {
+        public bool Enabled { get; set; } = true;
+
+        public SenderOptions Sender { get; set; }
+
+        public List<string> Receivers { get; set; }
+
+        public int RetryTimes { get; set; } = 10;
+
+        public int RetryIntervalInMinutes { get; set; } = 2;
+
+        public class SenderOptions
+        {
+            public string SmtpServer { get; set; }
+
+            public int Port { get; set; }
+
+            public bool UseSsl { get; set; }
+
+            public string Address { get; set; }
+
+            public string User { get; set; }
+
+            public string Password { get; set; }
+        }
+    }
+
+    public static class MailNotificationServiceExtensions
+    {
+        public static IServiceCollection AddMailNotification(this IServiceCollection services, Action<MailNotificationOptions> configureOptions) =>
+            services.TryAddViewRender()
+                    .Configure(configureOptions)
+                    .AddSingleton<INotificationService, MailNotificationService>();
+
+
+        public static IServiceCollection AddMailNotification(this IServiceCollection services, IConfiguration section) =>
+            services.TryAddViewRender()
+                    .Configure<MailNotificationOptions>(section)
+                    .AddSingleton<INotificationService, MailNotificationService>();
     }
 }

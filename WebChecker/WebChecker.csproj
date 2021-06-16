@@ -23,6 +23,19 @@
 
 	<ItemGroup>
 	  <Compile Remove="CheckJob.cs" />
+	  <Compile Remove="Pages\Test.cshtml.cs" />
+	  <Compile Remove="Services\Jobs\CheckJob.cs" />
+	  <Compile Remove="Services\Jobs\NotifyJob.cs" />
+	  <Compile Remove="Services\Notifications\MailNotificationTemplate.cshtml.cs" />
+	  <Compile Remove="Vars.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Remove="Pages\Test.cshtml" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include="..\.editorconfig" Link=".editorconfig" />
 	</ItemGroup>
 
 	<ItemGroup>

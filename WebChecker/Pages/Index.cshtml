@@ -1,8 +1,10 @@
 ﻿@page "{handler?}"
 @using AhDung.WebChecker
+@inject AppSettings _settings
 @model AhDung.WebChecker.Pages.IndexModel
 @{
     ViewBag.Title = "Web Checker";
+    var _webs = _settings.Webs;
 }
 
 @section head{
@@ -122,14 +124,14 @@
         <span>Refresh(sec) <input id="txbRefresh" type="number" value="@Model.PageRefreshIntervalSeconds"/></span><span style="margin-left: 2em">@User.Identity.Name | <a id="signout" asp-page-handler="SignOut">Sign out</a></span>
     </span>
 </header>
-@if (Vars.EnabledWebs.Count == 0)
+@if (_webs.Count == 0)
 {
     <p style="margin: 3em 0; text-align: center;">No web need check. Configure in <strong>appsettings.json</strong></p>
 }
 else
 {
     <table>
-        @foreach (var web in Vars.EnabledWebs)
+        @foreach (var web in _webs)
         {
             var cssClass = web.InChecking || web.Result?.Succeeded is not {} succeeded ? "" : succeeded ? "ok" : "fault";
             var speed = web.InChecking || web.Result is not {Succeeded: true } r ? "" : $" {r.Speed}ms";
@@ -148,7 +150,7 @@ else
                 <td colspan="3">
                     <p>Url: <a href="@web.Url" target="_blank">@web.Url</a></p>
                     @errMsg
-                    <p>Last check: @web.LastCheck?.ToString(AppSettings.TimeFormat)</p>
+                    <p>Last check: @web.LastCheck?.ToString(_settings.TimeFormat)</p>
                 </td>
             </tr>
         }

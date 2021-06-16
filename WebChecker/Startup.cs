@@ -1,31 +1,27 @@
-using System.Collections.Generic;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using System.Text.Unicode;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.Extensions.Configuration;
-using System.Linq;
-using System.Net.Http;
-using AhDung.WebChecker.Models;
-using System;
-using System.IO;
-using AhDung.WebChecker.Jobs;
 using AhDung.WebChecker.Services;
 using AhDung.WebChecker.Services.Jobs;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Serilog;
+using System;
+using System.IO;
+using System.Net.Http;
+using System.Text.Unicode;
 
 namespace AhDung.WebChecker
 {
     public class Startup
     {
+        private readonly IConfiguration _configuration;
+
         public Startup(IConfiguration configuration)
         {
-            AppSettings.Configuration = configuration;
-            Vars.EnabledWebs.AddRange(configuration.GetSection("Webs")?.Get<List<Web>>().Where(x => x.Enabled) ?? Enumerable.Empty<Web>());
+            _configuration = configuration;
         }
 
         // This method gets called by the runtime. Use this method to add services to the container.
@@ -48,22 +44,17 @@ namespace AhDung.WebChecker
                      });
 
             services.AddHttpClient("default")
-                    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+                    .ConfigurePrimaryHttpMessageHandler(sp => new SocketsHttpHandler
                      {
-                         PooledConnectionLifetime    = TimeSpan.FromSeconds(AppSettings.Network.PooledConnectionLifetimeInSeconds),
+                         PooledConnectionLifetime    = TimeSpan.FromSeconds(sp.GetRequiredService<AppSettings>().Network.PooledConnectionLifetimeInSeconds),
                          PooledConnectionIdleTimeout = TimeSpan.Zero,
                          UseProxy                    = false, //关键，不然回收后请求很慢
                      })
-                    .ConfigureHttpClient(client => client.Timeout = TimeSpan.FromSeconds(AppSettings.Network.TimeoutInSeconds));
+                    .ConfigureHttpClient((sp,client)=> client.Timeout = TimeSpan.FromSeconds(sp.GetRequiredService<AppSettings>().Network.TimeoutInSeconds));
 
-            services.AddTransient<INotificationService, MailNotificationService>();
-            services.AddHostedService<NotifyJob>();
-
-            Vars.EnabledWebs.ForEach(web =>
-                //不能用AddHostedService，有BUG，相同类型只会添加一个实例
-                services.AddSingleton<IHostedService>(sp => new CheckJob(web,
-                    sp.GetRequiredService<IHttpClientFactory>().CreateClient("default"),
-                    sp.GetService<ILogger<CheckJob>>())));
+            services.AddMailNotification(_configuration.GetSection("Notify:Email"));
+            services.AddSingleton<AppSettings>();
+            services.AddHostedService<CheckService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -79,7 +70,17 @@ namespace AhDung.WebChecker
             app.UseSerilogRequestLogging();
             app.UseAuthentication();
             app.UseAuthorization();
-            app.UseEndpoints(endpoints => endpoints.MapRazorPages());
+            app.UseEndpoints(endpoints =>
+            {
+                endpoints.MapRazorPages();
+                //endpoints.MapGet("/test", async _ =>
+                //{
+                //    var services = _.RequestServices.GetServices<INotificationService>().ToList();
+                //    //await NotifyJob.AddToQueueAsync(new Web { Name = "百度", Enabled = true, LastCheck = DateTimeOffset.Now, Url = "http://baidu.com", Result = new() { Speed = 30, State = "200", Succeeded = true } });
+                //    //await NotifyJob.AddToQueueAsync(new Web { Name = "腾讯", Enabled = true, LastCheck = DateTimeOffset.Now, Url = "http://qq.com", Result = new() { Speed = 30, State = "200", Succeeded = true } });
+                //    //await NotifyJob.AddToQueueAsync(new Web { Name = "Google", Enabled = true, LastCheck = DateTimeOffset.Now, Url = "http://google.com", Result = new() { Speed = 0, State = "Fault", Succeeded = false, Detail = "访问超时" } });
+                //});
+            });
         }
     }
 }

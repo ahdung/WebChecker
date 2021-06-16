@@ -17,7 +17,7 @@
     },
     "App": {
       "commandName": "Project",
-      "launchBrowser": true,
+      "launchUrl": "test",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },

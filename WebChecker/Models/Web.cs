@@ -10,6 +10,8 @@ namespace AhDung.WebChecker.Models
 
         public int? IntervalSeconds { get; set; }
 
+        public int? FaultIntervalSeconds { get; set; }
+
         public bool Enabled { get; set; } = true;
 
         /// <summary>
@@ -23,31 +25,18 @@ namespace AhDung.WebChecker.Models
 
         public CheckResult Result { get; set; }
 
-        ///// <summary>
-        ///// 响应码。异常时显示Fault
-        ///// </summary>
-        //public string State { get; set; }
-
-        ///// <summary>
-        ///// 访问速度。毫秒
-        ///// </summary>
-        //public long? Speed { get; set; }
-
-        //public bool? IsOk { get; set; }
-
-        //public string ErrorMessage { get; set; }
-
         public Web Clone() => (Web)((ICloneable)this).Clone();
 
         object ICloneable.Clone() => new Web
         {
-            Name            = Name,
-            Url             = Url,
-            IntervalSeconds = IntervalSeconds,
-            Enabled         = Enabled,
-            InChecking      = InChecking,
-            LastCheck       = LastCheck,
-            Result          = Result?.Clone(),
+            Name                 = Name,
+            Url                  = Url,
+            IntervalSeconds      = IntervalSeconds,
+            FaultIntervalSeconds = FaultIntervalSeconds,
+            Enabled              = Enabled,
+            InChecking           = InChecking,
+            LastCheck            = LastCheck,
+            Result               = Result?.Clone(),
         };
     }
 }

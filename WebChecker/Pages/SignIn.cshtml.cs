@@ -13,9 +13,16 @@ namespace AhDung.WebChecker.Pages
     [BindProperties]
     public class SignInModel : PageModel
     {
+        readonly AppSettings _settings;
+
         public User UserInfo { get; set; }
 
         public string ErrorMessage { get; set; }
+
+        public SignInModel(AppSettings settings)
+        {
+            _settings = settings;
+        }
 
         public IActionResult OnGet(string returnUrl)
         {
@@ -51,9 +58,9 @@ namespace AhDung.WebChecker.Pages
 
         bool ValidateUser(out User user)
         {
-            user = AppSettings.Users.Find(x => x.Enabled
-                                               && string.Equals(x.Name, UserInfo.Name, StringComparison.OrdinalIgnoreCase)
-                                               && x.Password == UserInfo.Password);
+            user = _settings.Users.Find(x => x.Enabled
+                                             && string.Equals(x.Name, UserInfo.Name, StringComparison.OrdinalIgnoreCase)
+                                             && x.Password == UserInfo.Password);
             return user != null;
         }
     }

@@ -10,15 +10,22 @@ namespace AhDung
     {
         private readonly TimeSpan _interval;
         private readonly TimeSpan _delay;
-        private readonly bool _allowReentrant;
-        private readonly bool _autoLog;
-        readonly Timer _timer;
-        int _runningFlag;
+        private readonly bool     _allowReentrant;
+        private readonly bool     _autoLog;
+        readonly         Timer    _timer;
+        int                       _runningFlag;
 
         protected ILogger Logger { get; }
-        public string Name { get; }
+        public    string  Name   { get; }
 
-        protected TimerJobBase(TimeSpan interval, object state=null, TimeSpan delay = default, bool allowReentrant = false, ILogger logger = null, bool autoLog = true, string name = null)
+        protected TimerJobBase(
+            TimeSpan interval,
+            object   state          = null,
+            TimeSpan delay          = default,
+            bool     allowReentrant = false,
+            ILogger  logger         = null,
+            bool     autoLog        = true,
+            string   name           = null)
         {
             _interval       = interval;
             _delay          = delay;
@@ -74,6 +81,9 @@ namespace AhDung
                 Logger?.LogInformation(message);
             }
         }
+
+        protected void ChangeTimer(TimeSpan dueTime,TimeSpan period) =>
+            _timer.Change(dueTime, period);
 
         protected virtual void Dispose(bool disposing)
         {

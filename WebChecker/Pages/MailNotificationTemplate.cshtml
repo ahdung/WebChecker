@@ -1,0 +1,108 @@
+﻿@*手动渲染时需删除该标记*@
+@*@page*@
+@using System.Net
+@model AhDung.WebChecker.Notifications.Templates.MailNotificationTemplateModel
+@*@model IEnumerable<AhDung.WebChecker.Models.Web>*@
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width"/>
+    <meta name="format-detection" content="telephone=no"/>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .item {
+            border-width: 1px;
+            border-style: solid;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .ok { border-color: rgb(115, 175, 115); }
+
+        .error { border-color: rgb(218, 144, 144); }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px;
+            border-top-left-radius: 3px;
+            border-top-right-radius: 3px;
+        }
+
+        .ok header { background-color: rgb(195, 223, 195); }
+
+        .error header { background-color: rgb(247, 203, 203); }
+
+        .content {
+            padding: 5px;
+            word-break: break-all;
+        }
+
+        a, a:visited {
+            color: rgb(29, 119, 255);
+            text-decoration: none;
+        }
+
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+
+<body>
+@foreach (var web in Model.Webs.OrderBy(x => x.Result.Succeeded).ThenBy(x => x.LastCheck))
+{
+    <div class="item @(web.Result.Succeeded ? "ok" : "error")">
+        <header>
+            <span>@web.Name</span>
+            <span>@web.LastCheck!.Value.ToString("HH:mm:ss")</span>
+        </header>
+        <div class="content">
+            <p>Url: <a href="@web.Url" target="_blank">@WebUtility.HtmlEncode(web.Url)</a></p>
+            @if (web.Result.Succeeded)
+            {
+                <p>Speed: @(web.Result.Speed)ms</p>
+            }
+            else
+            {
+                <p>Error: @WebUtility.HtmlEncode(web.Result.Detail)</p>
+            }
+            <p>CheckTime: @web.LastCheck!.Value.ToString(Model.TimeFormat)</p>
+        </div>
+    </div>
+}
+@*<div class="item ok">
+    <header>
+        <span>name</span>
+        <span>23:59</span>
+    </header>
+    <div class="content">
+        <p>Url: <a href="http://baidu.com">http://baidu.com</a></p>
+        <p>Speed: 300ms</p>
+        <p>CheckTime: 2021-02-15 14:40:03.234</p>
+    </div>
+</div>
+<div class="item error">
+    <header>
+        <span>name</span>
+        <span>23:59</span>
+    </header>
+    <div class="content">
+        <p>Url: <a href="http://baidu.com">http://baidu.com</a></p>
+        <p>Error: 阿斯顿发到付</p>
+        <p>CheckTime: 2021-02-15 14:40:03.234</p>
+    </div>
+</div>*@
+<p>To visit WebChecker:<br/><a href="@Model.ToolUrl" target="_blank">@(WebUtility.HtmlEncode(Model.ToolUrl))</a></p>
+</body>
+
+</html>
