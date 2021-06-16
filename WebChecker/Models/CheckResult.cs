@@ -21,14 +21,20 @@ namespace AhDung.WebChecker.Models
         /// </summary>
         public string Detail { get; set; }
 
+        /// <summary>
+        /// 服务器时间
+        /// </summary>
+        public DateTime? ServerTime { get; set; }
+
         public CheckResult Clone() => (CheckResult)((ICloneable)this).Clone();
 
         object ICloneable.Clone() => new CheckResult
         {
-            Detail    = Detail,
-            Speed     = Speed,
-            State     = State,
-            Succeeded = Succeeded,
+            Detail     = Detail,
+            Speed      = Speed,
+            State      = State,
+            Succeeded  = Succeeded,
+            ServerTime = ServerTime,
         };
     }
 }

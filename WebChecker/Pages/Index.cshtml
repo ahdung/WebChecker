@@ -151,6 +151,7 @@ else
                     <p>Url: <a href="@web.Url" target="_blank">@web.Url</a></p>
                     @errMsg
                     <p>Last check: @web.LastCheck?.ToString(_settings.TimeFormat)</p>
+                    <p>Server time: @web.Result?.ServerTime?.ToString(_settings.TimeFormat)</p>
                 </td>
             </tr>
         }

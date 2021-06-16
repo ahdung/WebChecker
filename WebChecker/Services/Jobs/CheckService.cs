@@ -107,6 +107,8 @@ namespace AhDung.WebChecker.Services.Jobs
                     {
                         result.Detail = response.StatusCode.ToString();
                     }
+
+                    result.ServerTime = response.Headers.Date?.LocalDateTime;
                 }
                 catch (Exception ex)
                 {

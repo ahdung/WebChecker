@@ -77,6 +77,7 @@
                 <p>Error: @WebUtility.HtmlEncode(web.Result.Detail)</p>
             }
             <p>CheckTime: @web.LastCheck!.Value.ToString(Model.TimeFormat)</p>
+            <p>ServerTime: @web.Result.ServerTime?.ToString(Model.TimeFormat)</p>
         </div>
     </div>
 }
