@@ -58,8 +58,7 @@ namespace AhDung.WebChecker.Pages
 
         bool ValidateUser(out User user)
         {
-            user = _settings.Users.Find(x => x.Enabled
-                                             && string.Equals(x.Name, UserInfo.Name, StringComparison.OrdinalIgnoreCase)
+            user = _settings.Users.Find(x => string.Equals(x.Name, UserInfo.Name, StringComparison.OrdinalIgnoreCase)
                                              && x.Password == UserInfo.Password);
             return user != null;
         }

@@ -41,7 +41,7 @@ namespace AhDung.WebChecker
 
                 if (result.Any(x => x))
                 {
-                    logger.LogInformation("fire Changed event...");
+                    logger.LogInformation("Fire Changed event...");
                     OnChanged(EventArgs.Empty);
                 }
             });
@@ -94,7 +94,7 @@ namespace AhDung.WebChecker
 
         public string TimeFormat => _configuration["TimeFormat"] ?? "yyyy-MM-dd HH:mm:ss";
 
-        public List<User> Users => _configuration.GetSection("Users").Get<List<User>>() ?? new();
+        public List<User> Users => _configuration.GetSection("Users").Get<List<User>>()?.Where(x => x.Enabled).ToList() ?? new();
 
         List<Web> _webs;
 

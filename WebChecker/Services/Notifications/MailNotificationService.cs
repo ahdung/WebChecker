@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
+using System.Text;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -49,13 +50,13 @@ namespace AhDung.WebChecker.Services
 
                 _logger.LogInformation("Picked {count} webs from notification queue: {webs}.", webs.Count, string.Join(", ", webs.Select(x => x.Name)));
 
-                var info = await MakeMailInfo(webs);
+                var info = await MakeMailInfoAsync(webs).ConfigureAwait(false);
                 _logger.LogInformation("Sending mail...");
-                await SendMailAsync(info.HtmlBody, info.Title);
+                await SendMailAsync(info.HtmlBody, info.Title).ConfigureAwait(false);
             }
         }
 
-        async Task<(string Title, string HtmlBody)> MakeMailInfo(IEnumerable<Web> webs)
+        async Task<(string Title, string HtmlBody)> MakeMailInfoAsync(IEnumerable<Web> webs)
         {
             var webList = webs.ToList();
             var model = new MailNotificationTemplateModel
@@ -107,10 +108,11 @@ namespace AhDung.WebChecker.Services
                 {
                     using var msg = new MailMessage
                     {
-                        From       = new(sender.Address),
-                        Subject    = title ?? "WebChecker通知",
-                        IsBodyHtml = true,
-                        Body       = htmlBody,
+                        From         = new(sender.Address),
+                        Subject      = title ?? "WebChecker通知",
+                        IsBodyHtml   = true,
+                        Body         = htmlBody,
+                        BodyEncoding = Encoding.UTF8,
                     };
 
                     receivers.ForEach(msg.To.Add);
@@ -131,6 +133,7 @@ namespace AhDung.WebChecker.Services
                     _logger.LogWarning("Mail sending retry times: {times}", retryTimes);
                     if (retryTimes <= 0)
                     {
+                        _logger.LogWarning("Retry times reached 0, won't retry.");
                         break;
                     }
 
@@ -161,9 +164,9 @@ namespace AhDung.WebChecker.Services
                 _ = Task.Delay(TimeSpan.FromSeconds(options.SendingDelaySeconds))
                         .ContinueWith(_ =>
                          {
-                             _logger.LogTrace("cde signal...");
+                             _logger.LogTrace("CountdownEvent signal...");
                              _cde.Signal();
-                             _logger.LogTrace("cde signaled.");
+                             _logger.LogTrace("CountdownEvent signaled.");
                          });
             }
         }

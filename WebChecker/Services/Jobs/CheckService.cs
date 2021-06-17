@@ -34,7 +34,7 @@ namespace AhDung.WebChecker.Services.Jobs
             ReStartChecking();
             _settings.Changed += (_, _) =>
             {
-                _logger.LogWarning("settings changed.");
+                _logger.LogWarning("Settings changed.");
                 ReStartChecking();
             };
             return Task.CompletedTask;
