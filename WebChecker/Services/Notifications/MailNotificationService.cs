@@ -5,6 +5,7 @@ using AhDung.WebChecker.Notifications.Templates;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,24 +14,23 @@ using System.Net.Mail;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Options;
 
 namespace AhDung.WebChecker.Services
 {
     public class MailNotificationService : INotificationService
     {
         readonly IOptionsMonitor<MailNotificationOptions> _optionsMonitor;
-        readonly ILogger<MailNotificationService> _logger;
-        readonly IServiceScopeFactory _scopeFactory;
-        readonly AppSettings _settings;
-        readonly Channel<Web> _messageQueue = Channel.CreateUnbounded<Web>(new() { SingleReader = true });
-        readonly CountdownEvent _cde = new(0);
+        readonly ILogger<MailNotificationService>         _logger;
+        readonly IServiceScopeFactory                     _scopeFactory;
+        readonly AppSettings                              _settings;
+        readonly Channel<Web>                             _messageQueue = Channel.CreateUnbounded<Web>(new() { SingleReader = true });
+        readonly CountdownEvent                           _cde          = new(0);
 
         public MailNotificationService(
             IOptionsMonitor<MailNotificationOptions> optionsMonitor,
-            AppSettings settings,
-            IServiceScopeFactory scopeFactory,
-            ILogger<MailNotificationService> logger
+            AppSettings                              settings,
+            IServiceScopeFactory                     scopeFactory,
+            ILogger<MailNotificationService>         logger
         )
         {
             _optionsMonitor = optionsMonitor;
@@ -96,8 +96,8 @@ namespace AhDung.WebChecker.Services
                 return;
             }
 
-            var retryTimes = options.RetryTimes;
-            var retryIntervalInMinutes = options.RetryIntervalInMinutes;
+            var retryTimes             = options.RetryTimes;
+            var retryIntervalInMinutes = options.RetryIntervalMinutes;
             if (retryIntervalInMinutes < 0)
                 retryIntervalInMinutes = 0;
 
@@ -142,8 +142,9 @@ namespace AhDung.WebChecker.Services
 
         public async Task NotifyAsync(Web web)
         {
-            if (!_optionsMonitor.CurrentValue.Enabled)
+            if (_optionsMonitor.CurrentValue is not { Enabled: true } options)
             {
+                _logger.LogTrace("{way} on disabled, won't send.", "Mail notification");
                 return;
             }
 
@@ -153,11 +154,17 @@ namespace AhDung.WebChecker.Services
             {
                 _logger.LogInformation("Adding \"{name}\" to notification queue.", web.Name);
                 await _messageQueue.Writer.WriteAsync(web).ConfigureAwait(false);
+                _logger.LogTrace("Added \"{name}\" to notification queue.", web.Name);
             }
             finally
             {
-                _ = Task.Delay(3000)
-                        .ContinueWith(_ => _cde.Signal());
+                _ = Task.Delay(TimeSpan.FromSeconds(options.SendingDelaySeconds))
+                        .ContinueWith(_ =>
+                         {
+                             _logger.LogTrace("cde signal...");
+                             _cde.Signal();
+                             _logger.LogTrace("cde signaled.");
+                         });
             }
         }
     }
@@ -172,7 +179,9 @@ namespace AhDung.WebChecker.Services
 
         public int RetryTimes { get; set; } = 10;
 
-        public int RetryIntervalInMinutes { get; set; } = 2;
+        public int RetryIntervalMinutes { get; set; } = 2;
+
+        public int SendingDelaySeconds { get; set; } = 8;
 
         public class SenderOptions
         {

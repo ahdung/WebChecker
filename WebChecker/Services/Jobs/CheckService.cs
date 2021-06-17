@@ -91,7 +91,7 @@ namespace AhDung.WebChecker.Services.Jobs
                 try
                 {
                     web.InChecking = true;
-                    //_logger.LogInformation("Checking {name}...", web.Name);
+                    _logger.LogTrace("Checking {name}...", web.Name);
 
                     var start = Stopwatch.GetTimestamp();
                     using var response = _client.Send(new HttpRequestMessage(HttpMethod.Get, web.Url));

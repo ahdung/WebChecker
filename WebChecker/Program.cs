@@ -17,12 +17,12 @@ namespace AhDung.WebChecker
 
         private static void TaskScheduler_UnobservedTaskException(object sender, System.Threading.Tasks.UnobservedTaskExceptionEventArgs e)
         {
-            Log.Error(e.Exception, $"{nameof(TaskScheduler_UnobservedTaskException)}发生异常！");
+            Log.Fatal(e.Exception, $"{nameof(TaskScheduler_UnobservedTaskException)}发生异常！");
         }
 
         private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            Log.Error(e.ExceptionObject as Exception, $"{nameof(CurrentDomain_UnhandledException)}发生异常！");
+            Log.Fatal(e.ExceptionObject as Exception, $"{nameof(CurrentDomain_UnhandledException)}发生异常！");
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args)
